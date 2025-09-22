@@ -2,6 +2,7 @@
 #define ISA_DNS_FORWARDER_H
 
 #include "hashtable.h"
+#include "main.h"
 #include <stdint.h>
 
 /* Struct for the DNS Header - NETWORK BYTE ORDER */
@@ -60,5 +61,17 @@ typedef struct {
     dns_rr_t *additionals;
 } dns_message_t;
 
+
+typedef struct {
+    int sockfd;
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_len;
+    ssize_t msg_len;
+    unsigned char buffer[1024];
+    ht_table_t table;
+    char *server_ip_or_domain_name;
+} thread_data_t;
+
 int server_part(int port, ht_table_t table, char *server_ip_or_domain_name);
+void bye_termination(Arguments *args, ht_table_t table);
 #endif // ISA_DNS_FORWARDER_H

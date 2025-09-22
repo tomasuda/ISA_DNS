@@ -12,16 +12,33 @@
 #include "main.h"
 #include "hashtable.h"
 #include "dns_forwarder.h"
+#include <signal.h>
 
 
-
+volatile sig_atomic_t stop_flag = 0;
 Arguments *scener_args = NULL;
+ht_table_t table = NULL;
+
+
+void handle_sigint() {
+    stop_flag = 1;
+        bye_termination(scener_args, table);
+
+}
+
+void setup_signal_handlers() {
+    struct sigaction stdin_signals;
+    stdin_signals.sa_handler = handle_sigint;
+    sigemptyset(&stdin_signals.sa_mask);
+    stdin_signals.sa_flags = 0;
+    sigaction(SIGINT, &stdin_signals, NULL);
+}
+
+
 
 int main(int argc, char *argv[]) {
-
-    ht_table_t table;
-
-    
+    setup_signal_handlers();
+ 
 
 
     scener_args =(Arguments*) malloc(sizeof(Arguments));

@@ -11,9 +11,13 @@
 #include "hashtable.h"
 #include "string_normalization.h"
 #include <errno.h>
+#include "main.h"
 #include <sys/time.h>
 #include <asm-generic/socket.h>
- #define PORT 53// Standard DNS port for resolver
+#include <pthread.h>
+
+
+#define PORT 53// Standard DNS port for resolver
 
 // ADD THIS HELPER FUNCTION FOR FLAGS
 void print_dns_header(HEADER *header) {
@@ -33,6 +37,19 @@ void print_dns_header(HEADER *header) {
     printf("  Answers: %d\n", ntohs(header->ancount));
     printf("  Authorities: %d\n", ntohs(header->nscount));
     printf("  Additionals: %d\n", ntohs(header->arcount));
+}
+
+
+void bye_termination(Arguments *args, ht_table_t table) {
+    if (args) {
+        free(args);
+        args = NULL;
+    }
+    if(table){
+        ht_delete_all(table);
+        table = NULL;
+    }
+    exit(EXIT_SUCCESS);
 }
 
 void send_receive(int sockfd, struct sockaddr_in *client_addr, 
@@ -166,13 +183,19 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
 
     printf("UDP server listening on port %d\n", port);
 
-
+    while (1) {
         // Receive data from client
+        // thread_data_t *data = malloc(sizeof(thread_data_t));
+        // if (!data) {
+        //     perror("malloc");
+        //     continue;
+        // }
+
         receiving_msg = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0,
                                 (struct sockaddr *)&client_addr, &client_addr_len);
         if (receiving_msg < 0) {
             perror("recvfrom");
-            // continue;
+            continue;
         }
 
         printf("Received %zd bytes from client\n", receiving_msg);
@@ -180,7 +203,7 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
         HEADER header;
         if(parse_dns_message(buffer, &header) < 0) {
             fprintf(stderr, "Failed to parse DNS message\n");
-            // continue;
+            continue;
         }
 
         // USE THE HELPER FUNCTION instead of direct access
@@ -223,7 +246,11 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
                 }
             }
         }
-   
+
+        // pthread_t tid;
+        // pthread_create(&tid, NULL, handle_client, data);
+        // pthread_detach(tid);
+    }
 
     close(sockfd);
     return 0;
