@@ -4,6 +4,8 @@
 #include "hashtable.h"
 #include "main.h"
 #include <stdint.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 /* Struct for the DNS Header - NETWORK BYTE ORDER */
 typedef struct header {

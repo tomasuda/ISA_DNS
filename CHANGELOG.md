@@ -10,10 +10,10 @@ DNS_FORWARDER
     sending  and recieving form  resolver
     sending data back to client
     support for more then one packet
+    make support for more then one forwarding at same time (threes)
 
 TODO
     `ctrl C` implementation ____DONE FOR NOW
-    make support for more then one forwarding at same time (threes)
     i dont know format i should send back to recipient
     tests
     documentation

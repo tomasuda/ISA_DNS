@@ -10,16 +10,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "main.h"
 
 
 void usage() {
     fprintf(stdout, "Usage: \n"); 
+    fprintf(stdout, "dns_forwarder -s server_ip_or_domain_name -f filter_file [-p port] [-v] [-h]\n");
+    fprintf(stdout, "DONT USE -v WITH TO MANY INPUTING PACKETS IT WILL RESULT IN RACE CONDITIONS\n");
     fprintf(stdout, " MANDATORY:\n");
     fprintf(stdout, " -s  IP adresa nebo doménové jméno DNS serveru (resolveru), kam se má zaslat dotaz\n");
     fprintf(stdout, " -f filter_file: Jméno souboru obsahující nežádoucí domény\n");
     fprintf(stdout, " OPTIONAL:\n");
     fprintf(stdout, " -p port: Číslo portu, na kterém bude program očekávat dotazy. Výchozí je port 53\n");
+    fprintf(stdout, " -v (verbose) - zapne režim s podrobným výstupem\n");
     fprintf(stdout, " -h (help)\n");
+
 }
 
 int parser(int argc, char *argv[], Arguments *chat_server_args) {
@@ -27,7 +32,7 @@ int parser(int argc, char *argv[], Arguments *chat_server_args) {
     int help_flag = 0, opt;
     int port = 53;
 
-    while ((opt = getopt(argc, argv, "s:p:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "s:p:f:v")) != -1) {
         switch (opt) {
             case 's': target_address = optarg; break;
             case 'p':
@@ -42,6 +47,7 @@ int parser(int argc, char *argv[], Arguments *chat_server_args) {
                 break;
             }
             case 'f': src_file_name = optarg; break;
+            case 'v': verbose_mode = 1; break;
             case 'h': help_flag = 1; break;
             default: usage(); exit(EXIT_FAILURE);
         }

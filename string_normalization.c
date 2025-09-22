@@ -29,7 +29,7 @@ char *normalize_string(const char *input) {
     return normalized;
 }
 
-char *main_domain_finder(const char *input) {
+char *main_domain_finder( char *input) {
 	if (input == NULL) return NULL;
 
 	// Find the last two segments of the domain

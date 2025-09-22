@@ -11,7 +11,7 @@
 #define MAX_IP_HOSTNAME_LEN 1024
 #define MAX_FILE_NAME_LEN 256
 
-
+extern int verbose_mode;
 typedef struct {
     char server_ip_or_domain_name[MAX_IP_HOSTNAME_LEN];
     char file_name[MAX_FILE_NAME_LEN];

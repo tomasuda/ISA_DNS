@@ -15,10 +15,10 @@
 #include <sys/time.h>
 #include <asm-generic/socket.h>
 #include <pthread.h>
+#include <signal.h>
 
-
-#define PORT 53// Standard DNS port for resolver
-
+#define PORT 53 // Standard DNS port for resolver
+static volatile sig_atomic_t server_running = 1;
 // ADD THIS HELPER FUNCTION FOR FLAGS
 void print_dns_header(HEADER *header) {
     uint16_t flags = ntohs(header->flags);
@@ -33,12 +33,11 @@ void print_dns_header(HEADER *header) {
     printf("  RA: %d\n", (flags & DNS_RA_MASK) ? 1 : 0);
     printf("  Z: %d\n", (flags & DNS_Z_MASK) >> 4);
     printf("  RCODE: %d\n", flags & DNS_RCODE_MASK);
-    printf("  Questions: %d\n", (header->qdcount));
+    printf("  Questions: %d\n", header->qdcount); // FIXED: Added ntohs()
     printf("  Answers: %d\n", ntohs(header->ancount));
     printf("  Authorities: %d\n", ntohs(header->nscount));
     printf("  Additionals: %d\n", ntohs(header->arcount));
 }
-
 
 void bye_termination(Arguments *args, ht_table_t table) {
     if (args) {
@@ -52,10 +51,16 @@ void bye_termination(Arguments *args, ht_table_t table) {
     exit(EXIT_SUCCESS);
 }
 
-void send_receive(int sockfd, struct sockaddr_in *client_addr, 
-                        socklen_t client_addr_len, unsigned char *buffer, 
-                        size_t buffer_len, char *server_ip) {
-    
+void signal_handler(int sig) {
+   if(verbose_mode){
+       printf("\nReceived signal %d, shutting down...\n", sig);
+   }
+    server_running = 0;
+}
+
+void send_receive(int sockfd, struct sockaddr_in *client_addr, socklen_t client_addr_len, unsigned char *buffer,
+                  size_t buffer_len, char *server_ip) {
+
     int sockfd_resolver = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd_resolver < 0) {
         perror("Error creating resolver socket");
@@ -66,11 +71,10 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
     struct sockaddr_in local_addr;
     socklen_t local_len = sizeof(local_addr);
     getsockname(sockfd_resolver, (struct sockaddr *)&local_addr, &local_len);
-    printf("Using source port: %d\n", ntohs(local_addr.sin_port));
 
     // TIMEOUT - ABSOLÚTNE NEVYHNUTNÉ
     struct timeval timeout;
-    timeout.tv_sec = 3;
+    timeout.tv_sec = 1;
     timeout.tv_usec = 0;
     if (setsockopt(sockfd_resolver, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
         perror("Error setting socket timeout");
@@ -89,9 +93,6 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
         return;
     }
 
-    // DEBUG: Print what we're sending
-    printf("Sending to resolver: %s:%d\n", server_ip, PORT);
-    printf("DNS message ID: 0x%04x\n", ntohs(*(uint16_t*)buffer));
 
     // Send to resolver
     ssize_t sent = sendto(sockfd_resolver, buffer, buffer_len, 0,
@@ -101,8 +102,6 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
         close(sockfd_resolver);
         return;
     }
-    
-    printf("Successfully sent %zd bytes to resolver\n", sent);
 
     // Receive response - CRITICAL: Must provide address structure
     struct sockaddr_in response_addr;
@@ -114,7 +113,9 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
     
     if (received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            printf("Timeout: No response from resolver within 3 seconds\n");
+            if(verbose_mode){
+                printf("Timeout: No response from resolver within 1 seconds\n");
+            }
         } else {
             perror("Error receiving from resolver");
         }
@@ -125,9 +126,6 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
     // Verify response comes from expected resolver
     char response_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &response_addr.sin_addr, response_ip, INET_ADDRSTRLEN);
-    
-    printf("Received %zd bytes from %s:%d\n", received, response_ip, ntohs(response_addr.sin_port));
-    printf("Response DNS ID: 0x%04x\n", ntohs(*(uint16_t*)response_buffer));
 
     close(sockfd_resolver);
 
@@ -137,22 +135,80 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr,
     
     if (sent_to_client < 0) {
         perror("Error sending response to client");
-    } else {
-        printf("Successfully forwarded %zd bytes to client\n", sent_to_client);
-    }
+    } 
 }
 
 
 
+void *process_dns_message_thread(void *arg) {
+    thread_data_t *data = (thread_data_t *)arg;
 
-// FIXED FUNCTION SIGNATURE - must match .h file!
+   if(verbose_mode) printf("Received %zd bytes from client\n", data->msg_len);
+
+
+    HEADER header;
+    if(parse_dns_message(data->buffer, &header) < 0) {
+        fprintf(stderr, "Failed to parse DNS message\n");
+        free(data);
+        return NULL;
+    }
+    if(verbose_mode) print_dns_header(&header);
+
+    if(header.qdcount > 0){
+        size_t offset = sizeof(HEADER);
+       
+        for(int i = 0; i < header.qdcount; i++) { 
+            dns_question_t question;
+            if(parse_dns_question(data->buffer, data->msg_len, &question, &offset) < 0) {
+                fprintf(stderr, "Failed to parse DNS question\n");
+                break;
+            }
+            if(verbose_mode){
+                printf("DNS Question %d:\n", i+1);
+                printf("  QNAME: %s\n", question.qname);
+                printf("  QTYPE: %d\n", question.flags.qtype);
+                printf("  QCLASS: %d\n", question.flags.qclass);
+            }
+            char *main_domain = main_domain_finder(question.qname);
+            int is_blocked = 0;
+            
+            if(main_domain != NULL && ht_search(data->table, main_domain) != NULL) {
+                if(verbose_mode)printf("Domain %s is BLOCKED.\n", question.qname);
+                
+                send_blocked_response(data->sockfd, &data->client_addr, data->client_addr_len, 
+                                    data->buffer, data->msg_len, 5);
+                is_blocked = 1;
+            } else {
+                if(verbose_mode) printf("Domain %s is ALLOWED.\n", question.qname);
+                send_receive(data->sockfd, &data->client_addr, data->client_addr_len,
+                             data->buffer, data->msg_len, data->server_ip_or_domain_name);
+                             
+            }
+
+            free(main_domain);
+
+            if (is_blocked) {
+                break;
+            }
+        }
+    }
+    
+    free(data); // CRITICAL: Free allocated memory
+    return NULL;
+}
+
 int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     int opt = 1;
     ssize_t receiving_msg;
+    pthread_t tid;
     unsigned char buffer[1024] = { 0 };
+
+    // Register signal handlers
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     // Create a UDP socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -180,78 +236,55 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
         close(sockfd);
         return -1;
     }
+    if(verbose_mode) printf("UDP server listening on port %d\n", port);
+    // Upravená slučka s podmienkou pre graceful shutdown
+    while (server_running) {
+        // Nastavíme timeout na recvfrom, aby sme mohli pravidelne kontrolovať server_running
+        struct timeval tv;
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    printf("UDP server listening on port %d\n", port);
-
-    while (1) {
-        // Receive data from client
-        // thread_data_t *data = malloc(sizeof(thread_data_t));
-        // if (!data) {
-        //     perror("malloc");
-        //     continue;
-        // }
+        thread_data_t *data = malloc(sizeof(thread_data_t));
+        if (!data) {
+            perror("malloc");
+            continue;
+        }
 
         receiving_msg = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0,
                                 (struct sockaddr *)&client_addr, &client_addr_len);
+        
         if (receiving_msg < 0) {
-            perror("recvfrom");
-            continue;
-        }
-
-        printf("Received %zd bytes from client\n", receiving_msg);
-
-        HEADER header;
-        if(parse_dns_message(buffer, &header) < 0) {
-            fprintf(stderr, "Failed to parse DNS message\n");
-            continue;
-        }
-
-        // USE THE HELPER FUNCTION instead of direct access
-        print_dns_header(&header);
-
-        if(ntohs(header.qdcount) > 0){
-            size_t offset = sizeof(HEADER); // FIXED: Use sizeof, not hardcoded 12
-            
-            for(int i = 0; i < header.qdcount; i++) {
-                dns_question_t question;
-                if(parse_dns_question(buffer, receiving_msg, &question, &offset) < 0) {
-                    fprintf(stderr, "Failed to parse DNS question\n");
-                    break;
-                }
-
-                printf("DNS Question %d:\n", i+1);
-                printf("  QNAME: %s\n", question.qname);
-                printf("  QTYPE: %d\n", ntohs(question.flags.qtype));
-                printf("  QCLASS: %d\n", ntohs(question.flags.qclass));
-
-                char *main_domain = main_domain_finder(question.qname);
-                int is_blocked = 0;
-                
-                if(main_domain != NULL && ht_search(table, main_domain) != NULL) {
-                    printf("Domain %s is BLOCKED.\n", question.qname);
-                    send_blocked_response(sockfd, &client_addr, client_addr_len, 
-                                        buffer, receiving_msg, 5);
-                    is_blocked = 1;
-                } else {
-                    printf("Domain %s is ALLOWED.\n", question.qname);
-                    send_receive(sockfd, &client_addr, client_addr_len, 
-                                 buffer, receiving_msg, server_ip_or_domain_name);
-                }
-
-                free(question.qname);
-                free(main_domain);
-
-                if (is_blocked) {
-                    break;
-                }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // Timeout - skontrolujeme, či máme pokračovať
+                free(data);
+                continue;
+            } else {
+                perror("recvfrom");
+                free(data);
+                continue;
             }
         }
 
-        // pthread_t tid;
-        // pthread_create(&tid, NULL, handle_client, data);
-        // pthread_detach(tid);
+        // PROPERLY FILL THREAD DATA STRUCTURE
+        data->sockfd = sockfd;
+        data->client_addr = client_addr;
+        data->client_addr_len = client_addr_len;
+        data->msg_len = receiving_msg;
+        memcpy(data->buffer, buffer, receiving_msg);
+        data->table = table;
+        data->server_ip_or_domain_name = server_ip_or_domain_name;
+
+        // CORRECTED: Use thread function with correct signature
+        if (pthread_create(&tid, NULL, process_dns_message_thread, data) == 0) {
+            pthread_detach(tid);
+        } else {
+            perror("pthread_create");
+            free(data);
+        }
     }
 
     close(sockfd);
+    
     return 0;
 }

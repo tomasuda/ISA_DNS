@@ -13,11 +13,14 @@
 #include "hashtable.h"
 #include "dns_forwarder.h"
 #include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 
 volatile sig_atomic_t stop_flag = 0;
 Arguments *scener_args = NULL;
 ht_table_t table = NULL;
+int verbose_mode = 0;
 
 
 void handle_sigint() {
@@ -28,6 +31,7 @@ void handle_sigint() {
 
 void setup_signal_handlers() {
     struct sigaction stdin_signals;
+    memset(&stdin_signals, 0, sizeof(stdin_signals));
     stdin_signals.sa_handler = handle_sigint;
     sigemptyset(&stdin_signals.sa_mask);
     stdin_signals.sa_flags = 0;
@@ -52,10 +56,12 @@ int main(int argc, char *argv[]) {
         free(scener_args);
         return EXIT_FAILURE;
     }
-    printf("Server: %s\n", scener_args->server_ip_or_domain_name);
-    printf("Port: %d\n", scener_args->server_port);
-    printf("File: %s\n", scener_args->file_name);
-    
+
+    if(verbose_mode){
+        printf("Server: %s\n", scener_args->server_ip_or_domain_name);
+        printf("Port: %d\n", scener_args->server_port);
+        printf("File: %s\n", scener_args->file_name);
+    }
 
     if (count_lines(scener_args->file_name) < 0) {
         fprintf(stderr, "Error: Failed to process file '%s'.\n", scener_args->file_name);
