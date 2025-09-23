@@ -139,12 +139,19 @@ void send_receive(int sockfd, struct sockaddr_in *client_addr, socklen_t client_
 }
 
 
+// FIXED: Added function to free DNS question resources
+void free_dns_question(dns_question_t *question) {
+    if (question && question->qname) {
+        free(question->qname);
+        question->qname = NULL;
+    }
+}
 
 void *process_dns_message_thread(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
+    int is_blocked = 0; // Track if domain is blocked
 
-   if(verbose_mode) printf("Received %zd bytes from client\n", data->msg_len);
-
+    if(verbose_mode) printf("Received %zd bytes from client\n", data->msg_len);
 
     HEADER header;
     if(parse_dns_message(data->buffer, &header) < 0) {
@@ -159,41 +166,59 @@ void *process_dns_message_thread(void *arg) {
        
         for(int i = 0; i < header.qdcount; i++) { 
             dns_question_t question;
+            memset(&question, 0, sizeof(question)); // FIXED: Initialize struct
+            
             if(parse_dns_question(data->buffer, data->msg_len, &question, &offset) < 0) {
                 fprintf(stderr, "Failed to parse DNS question\n");
                 break;
             }
+            
             if(verbose_mode){
                 printf("DNS Question %d:\n", i+1);
                 printf("  QNAME: %s\n", question.qname);
                 printf("  QTYPE: %d\n", question.flags.qtype);
                 printf("  QCLASS: %d\n", question.flags.qclass);
             }
-            char *main_domain = main_domain_finder(question.qname);
-            int is_blocked = 0;
+
+            char *sub_domain = question.qname;
+            char *current_domain = NULL;
             
-            if(main_domain != NULL && ht_search(data->table, main_domain) != NULL) {
-                if(verbose_mode)printf("Domain %s is BLOCKED.\n", question.qname);
+            is_blocked = 0;
+            
+            // FIXED: Proper domain parsing and memory management
+            do {
+                if(sub_domain != NULL && ht_search(data->table, sub_domain) != NULL) {
+                    is_blocked = 1;
+                    break;
+                }
                 
+                current_domain = sub_domain; // Store current before parsing
+                sub_domain = domain_parser(sub_domain);
+                
+                // FIXED: Don't free the original question.qname here
+                // The original will be freed in free_dns_question
+                
+            } while(sub_domain != NULL && strcmp(sub_domain, current_domain) != 0);
+
+            if (is_blocked){
+                if(verbose_mode) printf("Domain %s is BLOCKED.\n", question.qname);
                 send_blocked_response(data->sockfd, &data->client_addr, data->client_addr_len, 
                                     data->buffer, data->msg_len, 5);
-                is_blocked = 1;
-            } else {
+            }
+            else{
                 if(verbose_mode) printf("Domain %s is ALLOWED.\n", question.qname);
                 send_receive(data->sockfd, &data->client_addr, data->client_addr_len,
-                             data->buffer, data->msg_len, data->server_ip_or_domain_name);
-                             
+                            data->buffer, data->msg_len, data->server_ip_or_domain_name);
             }
 
-            free(main_domain);
+            //memory destructor
+            free_dns_question(&question);
 
-            if (is_blocked) {
-                break;
-            }
+            if (is_blocked) break;
         }
     }
     
-    free(data); // CRITICAL: Free allocated memory
+    free(data); // Free allocated memory for thread data
     return NULL;
 }
 

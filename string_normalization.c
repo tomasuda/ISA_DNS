@@ -29,6 +29,22 @@ char *normalize_string(const char *input) {
     return normalized;
 }
 
+//afinds all sub dommains and returns upper domains up to main domain
+char * domain_parser(char* input)
+{
+	if (input==NULL) return NULL;
+	char *first_dot = strchr(input, '.');// first dot subsud.sub.example.com -> sub.example.com
+	if (first_dot == NULL) return NULL;
+	return first_dot + 1;
+
+}
+// if www.example is included it will be cut of
+// char *prefix_annulation(char* input){
+// 	if (input==NULL) return NULL;
+// 	//TODO wat if www is not included
+
+// }
+
 char *main_domain_finder( char *input) {
 	if (input == NULL) return NULL;
 
