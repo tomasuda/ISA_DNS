@@ -49,7 +49,7 @@ int parser(int argc, char *argv[], Arguments *chat_server_args) {
             case 'f': src_file_name = optarg; break;
             case 'v': verbose_mode = 1; break;
             case 'h': help_flag = 1; break;
-            default: usage(); exit(EXIT_FAILURE);
+            default: fprintf(stderr, "Wrong argument"); usage();  exit(EXIT_FAILURE);
         }
     }
     if (help_flag) {

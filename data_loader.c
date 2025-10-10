@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hashtable.h"
+#include <unistd.h>
 
 // Global variable to store the count of valid lines
 //Usage for deallocation of memory
@@ -11,15 +12,6 @@
 // to reduce collisions
 int line_count = 0;
 
-// // Hash function
-// unsigned int hash(const char *str) {
-//     assert(str != NULL);
-//     unsigned int hash = 0;
-//     while (*str) {
-//         hash = (hash << 5) + *str++;
-//     }
-//     return hash;
-// }
 
 int count_lines(char *file_name) {
     FILE *file = fopen(file_name, "r");
@@ -87,7 +79,12 @@ int undesired_domains(char * file_name, ht_table_t table) {
         if(line[0] == '#' || line[0] == '\0') {
             continue; // Skip comments and empty lines
         }
-        
+
+        #ifdef TEST
+            printf( "'%s'\n", line);
+
+        #endif
+     
         ht_insert(table, line, line);
         
         // Process the line here (add to your filter structure)

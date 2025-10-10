@@ -54,14 +54,14 @@ typedef struct {
     unsigned char *rdata; // resource data
 } dns_rr_t;
 
-// DNS message structure
-typedef struct {
-    HEADER header;
-    dns_question_t *questions;
-    dns_rr_t *answers;
-    dns_rr_t *authorities;
-    dns_rr_t *additionals;
-} dns_message_t;
+// // DNS message structure
+// typedef struct {
+//     HEADER header;
+//     dns_question_t *questions;
+//     dns_rr_t *answers;
+//     dns_rr_t *authorities;
+//     dns_rr_t *additionals;
+// } dns_message_t;
 
 
 typedef struct {

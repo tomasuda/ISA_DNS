@@ -1,8 +1,11 @@
 # Compiler
 CC = gcc
 
-# Compilation flags
+# Normal compilation flags
 CFLAGS = -Wall -Wextra -std=gnu17 -O2
+
+# Test compilation flags
+TFLAGS = -Wall -Wextra -std=gnu17 -g -DTEST
 
 # Source file names
 SRCS = arg_parser.c main.c data_loader.c hashtable.c dns_forwarder.c dns_parser.c string_normalization.c
@@ -12,21 +15,34 @@ OBJS = $(SRCS:.c=.o)
 
 # Final executable name
 TARGET = dns
+TEST_TARGET = dns_test
 
-# Main rule
+# Test script
+TEST_SCRIPT = ./tests/test.py
+
+# Default target
 all: $(TARGET)
 
-# Rule for creating the executable
+# Normal build
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
 
-# Rule for compiling .c files to .o files
+# Compile objects
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean rule (remove object and executable files)
+# Clean rule
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(TEST_TARGET)
 
-# Rebuild rule
+# Test build: always rebuild with test flags
+test: $(TEST_TARGET)
+	@pytest $(TEST_SCRIPT)
+
+$(TEST_TARGET): $(SRCS)
+	$(CC) $(TFLAGS) -o $(TEST_TARGET) $(SRCS)
+
+# Rebuild
 rebuild: clean all
+
+.PHONY: all clean test rebuild

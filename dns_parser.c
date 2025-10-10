@@ -33,7 +33,6 @@ char *decode_dns_name(const unsigned char *buffer, size_t buffer_len,
     size_t pos = *offset;
     size_t name_len = 0;
     size_t compressed = 0;
-    size_t original_offset = *offset;
     
     // First pass: calculate length
     while (pos < buffer_len && buffer[pos] != 0) {
@@ -133,11 +132,11 @@ int parse_dns_question(const unsigned char *buffer, size_t buffer_len,
     return 0;
 }
 
-int repackage_dns_message(dns_message_t *message, unsigned char **buffer, size_t *buffer_len) {
-    // Implementation of repackaging the DNS message back into a byte buffer
-    // This function is left as an exercise for completeness
-    return 0;
-}
+// int repackage_dns_message(dns_message_t *message, unsigned char **buffer, size_t *buffer_len) {
+//     // Implementation of repackaging the DNS message back into a byte buffer
+//     // This function is left as an exercise for completeness
+//     return 0;
+// }
 
 
 size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len) {
@@ -205,7 +204,8 @@ void send_blocked_response(int sockfd, struct sockaddr_in *client_addr,
     if (sent_bytes < 0) {
         perror("sendto");
     } else {
-        printf("Sent blocked response (%zd bytes) to client\n", sent_bytes);
+        if(verbose_mode)  printf("Sent blocked response (%zd bytes) to client\n", sent_bytes);
+        
     }
 }
 

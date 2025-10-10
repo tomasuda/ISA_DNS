@@ -16,9 +16,17 @@
 #include <asm-generic/socket.h>
 #include <pthread.h>
 #include <signal.h>
+#include <ctype.h>
+#include <semaphore.h>
 
 #define PORT 53 // Standard DNS port for resolver
 static volatile sig_atomic_t server_running = 1;
+
+#define MAX_THREADS 10
+static sem_t thread_sem;
+
+
+
 // ADD THIS HELPER FUNCTION FOR FLAGS
 void print_dns_header(HEADER *header) {
     uint16_t flags = ntohs(header->flags);
@@ -149,7 +157,7 @@ void free_dns_question(dns_question_t *question) {
 
 void *process_dns_message_thread(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
-    int is_blocked = 0; // Track if domain is blocked
+    bool is_blocked ; // Track if domain is blocked
 
     if(verbose_mode) printf("Received %zd bytes from client\n", data->msg_len);
 
@@ -180,23 +188,23 @@ void *process_dns_message_thread(void *arg) {
                 printf("  QCLASS: %d\n", question.flags.qclass);
             }
 
-            char *sub_domain = question.qname;
+            char *sub_domain = (question.qname);
+            to_lower_str(sub_domain); 
             char *current_domain = NULL;
-            
-            is_blocked = 0;
-            
-            // FIXED: Proper domain parsing and memory management
+
+            is_blocked = false;
             do {
-                if(sub_domain != NULL && ht_search(data->table, sub_domain) != NULL) {
-                    is_blocked = 1;
+                if( ht_search(data->table,".") != NULL) {
+                    is_blocked = true;
+                    break;
+                }
+                else if(sub_domain != NULL && ht_search(data->table, sub_domain) != NULL) {
+                    is_blocked = true;
                     break;
                 }
                 
                 current_domain = sub_domain; // Store current before parsing
                 sub_domain = domain_parser(sub_domain);
-                
-                // FIXED: Don't free the original question.qname here
-                // The original will be freed in free_dns_question
                 
             } while(sub_domain != NULL && strcmp(sub_domain, current_domain) != 0);
 
@@ -217,7 +225,9 @@ void *process_dns_message_thread(void *arg) {
             if (is_blocked) break;
         }
     }
-    
+    if (sem_post(&thread_sem) != 0) {
+        perror("sem_post");
+    }
     free(data); // Free allocated memory for thread data
     return NULL;
 }
@@ -263,6 +273,13 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
     }
     if(verbose_mode) printf("UDP server listening on port %d\n", port);
     // Upravená slučka s podmienkou pre graceful shutdown
+
+    if (sem_init(&thread_sem, 0, MAX_THREADS) != 0) {
+        perror("sem_init");
+        close(sockfd);
+        return -1;
+    }
+
     while (server_running) {
         // Nastavíme timeout na recvfrom, aby sme mohli pravidelne kontrolovať server_running
         struct timeval tv;
@@ -291,7 +308,7 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
             }
         }
 
-        // PROPERLY FILL THREAD DATA STRUCTURE
+        //Fill thread data structure
         data->sockfd = sockfd;
         data->client_addr = client_addr;
         data->client_addr_len = client_addr_len;
@@ -300,7 +317,6 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
         data->table = table;
         data->server_ip_or_domain_name = server_ip_or_domain_name;
 
-        // CORRECTED: Use thread function with correct signature
         if (pthread_create(&tid, NULL, process_dns_message_thread, data) == 0) {
             pthread_detach(tid);
         } else {
@@ -308,7 +324,7 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
             free(data);
         }
     }
-
+    sem_destroy(&thread_sem);
     close(sockfd);
     
     return 0;
