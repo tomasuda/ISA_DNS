@@ -161,10 +161,12 @@ size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len
     return offset; // Length up to end of questions
 }
 
-void send_blocked_response(int sockfd, struct sockaddr_in *client_addr, 
-                         socklen_t client_addr_len, const unsigned char *request_buffer, 
-                         size_t request_len, int rcode) {
-
+// void send_blocked_response(int sockfd, struct sockaddr_in *client_addr, 
+//                          socklen_t client_addr_len, const unsigned char *request_buffer, 
+//                          size_t request_len, int rcode) {
+void send_blocked_response(int sockfd, struct sockaddr *client_addr, socklen_t client_addr_len,
+    const unsigned char *request_buffer, size_t request_len, int rcode){
+     
     
     // 1. Create response buffer
     size_t message_length = calculate_dns_message_length(request_buffer, request_len);

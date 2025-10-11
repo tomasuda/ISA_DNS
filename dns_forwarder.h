@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
     int sockfd;
-    struct sockaddr_in client_addr;
+    struct sockaddr_storage  client_addr;
     socklen_t client_addr_len;
     ssize_t msg_len;
     unsigned char buffer[1024];
