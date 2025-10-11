@@ -133,45 +133,45 @@ test() {
 ### Definice testů ###
 
 run() {
-    # #1/14
-    # test    name="Korektní doména"\
-    #         outputDig="23.192.228.80"
-    # #2/15
-    # test    name="Filtrovaná doména"\
-    #         domain="zmedia.com"\
-    #         rcode="REFUSED"
-    # #3/16
-    # test    name="Filtrovaná poddoména"\
-    #         domain="sub.my.public.wikia-ads.wikia.com"\
-    #         rcode="REFUSED"
-    # #4/17
-    # test    name="Neexistující doména"\
-    #         domain="neexistujici1234567890.cz"\
-    #         rcode="NXDOMAIN"
-    # #5/18
-    # test    name="Korektní dotaz typu IPv6"\
-    #         type="AAAA"\
-    #         outputDig="2600:1408:ec00:36::1736:7f24"
-    # #6/19
-    # test    name="Nevalidní doména (končí pomlčkou)"\
-    #         domain="domain-.com"\
-    #         rcode="NXDOMAIN"
-    # #7/20
-    # test    name="Nevalidní doména (neznámé znaky)"\
-    #         domain="my_address.io"\
-    #         rcode="NXDOMAIN"
-    # #8/21
-    # test    name="Root doména"\
-    #         domain="."
-    # #9/22
-    # test    name="Blokování domény v odlišném zápisu od filtru"\
-    #         domain="URL9467.COMMS-2.ZOoPLa.CO.UK."\
-    #         rcode="REFUSED"\
-    #         outputDig=""
-    # #10/23
-    # test    name="Blokování všech domén"\
-    #         filters="filtersAll.txt"\
-    #         rcode="REFUSED"
+    #1/14
+    test    name="Korektní doména"\
+            outputDig="23.192.228.80"
+    #2/15
+    test    name="Filtrovaná doména"\
+            domain="zmedia.com"\
+            rcode="REFUSED"
+    #3/16
+    test    name="Filtrovaná poddoména"\
+            domain="sub.my.public.wikia-ads.wikia.com"\
+            rcode="REFUSED"
+    #4/17
+    test    name="Neexistující doména"\
+            domain="neexistujici1234567890.cz"\
+            rcode="NXDOMAIN"
+    #5/18
+    test    name="Korektní dotaz typu IPv6"\
+            type="AAAA"\
+            outputDig="2600:1408:ec00:36::1736:7f24"
+    #6/19
+    test    name="Nevalidní doména (končí pomlčkou)"\
+            domain="domain-.com"\
+            rcode="NXDOMAIN"
+    #7/20
+    test    name="Nevalidní doména (neznámé znaky)"\
+            domain="my_address.io"\
+            rcode="NXDOMAIN"
+    #8/21
+    test    name="Root doména"\
+            domain="."
+    #9/22
+    test    name="Blokování domény v odlišném zápisu od filtru"\
+            domain="URL9467.COMMS-2.ZOoPLa.CO.UK."\
+            rcode="REFUSED"\
+            outputDig=""
+    #10/23
+    test    name="Blokování všech domén"\
+            filters="filtersAll.txt"\
+            rcode="REFUSED"
     #11/24
     test    name="Zátěž s více dotazy"\
             repeats=100

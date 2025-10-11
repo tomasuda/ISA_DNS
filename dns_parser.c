@@ -146,7 +146,7 @@ size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len
     size_t offset = sizeof(HEADER);
     
     // Skip questions
-    for (int i = 0; i < ntohs(header->qdcount) && offset < max_len; i++) {
+    for (int i = 0; i < header->qdcount && offset < max_len; i++) {
         // Skip QNAME (domain name)
         while (offset < max_len && dns_msg[offset] != 0) {
             offset += dns_msg[offset] + 1;
@@ -168,7 +168,7 @@ void send_blocked_response(int sockfd, struct sockaddr_in *client_addr,
     
     // 1. Create response buffer
     size_t message_length = calculate_dns_message_length(request_buffer, request_len);
-    unsigned char response[1024];
+    unsigned char response[4096];
     memcpy(response, request_buffer, message_length);
     
     // 2. Get pointer to DNS header
