@@ -10,8 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
 #include "main.h"
-
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <errno.h>
 
 void usage() {
     fprintf(stdout, "Usage: \n"); 
@@ -28,55 +31,134 @@ void usage() {
 }
 
 int parser(int argc, char *argv[], Arguments *chat_server_args) {
-    char  *target_address = NULL ,*src_file_name = NULL;
+    char *target_address = NULL, *src_file_name = NULL;
     int help_flag = 0, opt;
     int port = 53;
+    bool used_s = false, used_p = false, used_f = false, used_v = false;
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
 
-    while ((opt = getopt(argc, argv, "s:p:f:v")) != -1) {
+    hints.ai_family = AF_UNSPEC;     
+    hints.ai_socktype = SOCK_DGRAM; 
+    hints.ai_flags = AI_NUMERICSERV;
+    
+    if (argc == 1) {
+        usage();
+        exit(EXIT_SUCCESS);
+    }
+
+    while ((opt = getopt(argc, argv, "s:p:f:vh")) != -1) {
         switch (opt) {
-            case 's': target_address = optarg; break;
-            case 'p':
-            {
+            case 's': {
+                if (used_s) {
+                    fprintf(stderr, "ERROR: cant have duplicit arguments\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                if (optarg == NULL || optarg[0] == '-') {
+                    fprintf(stderr, "ERROR: -s requires argument\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                if (getaddrinfo(optarg, NULL, &hints, &res) != 0) {
+                    fprintf(stderr,"invalid IP ar domainname/n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                target_address = optarg; 
+                used_s = true;
+                break;
+            }
+            case 'p': {
+                if (used_p) {
+                    fprintf(stderr, "ERROR: cant have duplicit arguments\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                if (optarg == NULL || optarg[0] == '-') {
+                    fprintf(stderr, "ERROR: -p requires argument\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
                 for (char *p = optarg; *p != '\0'; p++) {
                     if (!isdigit((unsigned char)*p)) {
+                        fprintf(stderr, "ERROR: value of port must be number\n");
                         usage();
                         exit(EXIT_FAILURE);
                     }
                 }
                 port = atoi(optarg);
+                used_p = true;
                 break;
             }
-            case 'f': src_file_name = optarg; break;
-            case 'v': verbose_mode = 1; break;
-            case 'h': help_flag = 1; break;
-            default: fprintf(stderr, "Wrong argument"); usage();  exit(EXIT_FAILURE);
+            case 'f': { 
+                if (used_f) {
+                    fprintf(stderr, "ERROR: cant have duplicit arguments\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                if (optarg == NULL || optarg[0] == '-') {
+                    fprintf(stderr, "ERROR: -f requires argument\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                src_file_name = optarg;
+                used_f = true;
+                break;
+            }
+            case 'v': {
+                if (used_v) {
+                    fprintf(stderr, "ERROR: cant have duplicit arguments\n");
+                    usage();
+                    exit(EXIT_FAILURE);
+                }
+                verbose_mode = 1;
+                used_v = true;
+                break;
+            }
+            case 'h': 
+                help_flag = 1; 
+                break;
+                                         
+            default: 
+                fprintf(stderr, "Wrong argument\n"); 
+                usage();  
+                exit(EXIT_FAILURE);
         }
     }
+
+    // Zvyšok kódu zostáva rovnaký
     if (help_flag) {
+        if (used_s || used_f || used_p || used_v) {
+            fprintf(stderr, "ERROR: cant combine help with other arguments\n");
+            usage();
+            exit(EXIT_FAILURE);
+        }
         usage();
         exit(EXIT_SUCCESS);
     }
-    if (!target_address) {
-        fprintf(stdout, "Error: Missing -s argument.\n");
-        usage();
-        return -1;
-    }
-    if (!src_file_name) {
-        fprintf(stdout, "Error: Missing -f argument.\n");
-        usage();
-        return -1;
-    }
-    if(port < 1 || port > 65535) {
-        fprintf(stdout, "Error: Invalid port number. Must be between 1 and 65535.\n");
-        usage();
-        return -1;
-    }
-   
     
-   
+    if (target_address==NULL) {
+        fprintf(stderr, "Error: Missing -s argument.\n");
+        usage();
+        return -1;
+    }
+    
+    if (!src_file_name) {
+        fprintf(stderr, "Error: Missing -f argument.\n");
+        usage();
+        return -1;
+    }
+    
+    if (port < 1 || port > 65535) {
+        fprintf(stderr, "Error: Invalid port number. Must be between 1 and 65535.\n");
+        usage();
+        return -1;
+    }
    
     strcpy(chat_server_args->server_ip_or_domain_name, target_address);
     strcpy(chat_server_args->file_name, src_file_name);
     chat_server_args->server_port = port;
+    freeaddrinfo(res);
     return 1;
 }

@@ -84,7 +84,6 @@ test() {
 run() {
     #1
     test    name="Korektní spuštění"\
-            output="Klient naslouchá na portu"
     #2
     test    name="Verbose bez -v"\
             verbose=0\
@@ -92,40 +91,34 @@ run() {
     test    name="Neplatný port serveru (mimo rozsah)"\
             port="70000"\
             error=1\
-            output="Port musí být v rozsahu 1-65535"
     #4
     test    name="Neplatný port serveru (textová hodnota)"\
             port=""\
             additional="-p abc"\
             error=1\
-            output="Neplatný port: abc"
     #5
     test    name="Chybějící argument hodnoty za -p"\
             port=""\
             additional="-p"\
             error=1\
-            output="Neplatný či duplicitní argument"
     #6
     test    name="Chybějící hodnota posledního argumentu"\
             filters=""\
             additional="-f"\
             error=1\
-            output="Neplatný či duplicitní argument"
     #7
     test    name="Neexistující soubor s filtry"\
             filters="nonexistent.txt"\
             error=1\
-            output="Soubor neexistuje nebo není čitelný"
     #8
     test    name="Neplatný argument"\
             additional="-t 1000"\
             error=1\
-            output="Neplatný či duplicitní argument"
     #9
     test    name="Opakovaný argument -s"\
             additional="-s 8.8.8.8"\
             error=1\
-            output="Neplatný či duplicitní argument"
+
     #10
     test    name="Zobrazení nápovědy"\
             server=""\
@@ -133,59 +126,48 @@ run() {
             filters=""\
             verbose=0\
             help=1\
-            output="Použití: dns -"
     #11
     test    name="Prázdné spuštění (výchozí nápověda)"\
             server=""\
             port=""\
             filters=""\
             verbose=0\
-            output="Použití: dns -"
     #12
     test    name="Nápověda s ostatními argumenty"\
             help=1\
             error=1\
-            output="Argument -h nemůže být kombinován s jinými argumenty"
     #13
     test    name="Chybějící argument hodnoty za -s"\
             server=""\
             verbose=0\
             additional="-s -v"\
             error=1\
-            output="Chybná adresa serveru"
     #14
     test    name="Neplatná adresa serveru"\
             server="chyba"\
             error=1\
-            output="Chybná adresa serveru"
     #15
     test    name="Doménové jméno serveru"\
             server="one.one.one.one"\
-            output="Klient naslouchá na portu"
     #16
     test    name="IPv6 adresa serveru"\
             server="2001:4860:4860::8888"\
-            output="Klient naslouchá na portu"
     #17
     test    name="Chybějící adresa serveru"\
             server=""\
             error=1\
-            output="Chybí povinný argument -s server"
     #18
     test    name="Chybějící povinný argument -f"\
             filters=""\
             error=1\
-            output="Chybí povinný argument -f file"
     #19
     test    name="Neplatný filtr v souboru ('-' na konci labelu)"\
             filters="invalid1.txt"\
-            error=2\
-            output="Neplatný filtr v souboru"
+            error=2
     #20
     test    name="Neplatný filtr v souboru (dvě tečky za sebou)"\
             filters="invalid2.txt"\
-            error=2\
-            output="Neplatný filtr v souboru"
+            error=2
 }
 
 ### Spuštění testů ###

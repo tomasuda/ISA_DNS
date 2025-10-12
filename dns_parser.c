@@ -6,22 +6,17 @@
 #include "dns_parser.h"
 #include <arpa/inet.h>
 
+//functin for converting network byte order to host byte order
 int parse_dns_message(const unsigned char *buffer, HEADER *header)
 {
-      if (!buffer || !header) return -1;
+    if (!buffer || !header) return -1;
 
-   // Copy the raw header bytes
     memcpy(header, buffer, 12);
-    
-    // Convert network byte order to host byte order
     header->id = ntohs(header->id);
     header->qdcount = ntohs(header->qdcount);
     header->ancount = ntohs(header->ancount);
     header->nscount = ntohs(header->nscount);
     header->arcount = ntohs(header->arcount);
-
-    
-
     return 0;
 }
 
@@ -63,7 +58,7 @@ char *decode_dns_name(const unsigned char *buffer, size_t buffer_len,
     char *name = malloc(name_len);
     if (!name) return NULL;
     
-    // Second pass: build the name
+   //build the name
     pos = *offset;
     size_t name_pos = 0;
     int first = 1;
@@ -132,13 +127,6 @@ int parse_dns_question(const unsigned char *buffer, size_t buffer_len,
     return 0;
 }
 
-// int repackage_dns_message(dns_message_t *message, unsigned char **buffer, size_t *buffer_len) {
-//     // Implementation of repackaging the DNS message back into a byte buffer
-//     // This function is left as an exercise for completeness
-//     return 0;
-// }
-
-
 size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len) {
     if (max_len < sizeof(HEADER)) return 0;
     
@@ -154,61 +142,41 @@ size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len
         if (offset >= max_len) break;
         offset++; // Skip null byte
         
-        // Skip QTYPE and QCLASS (4 bytes)
+        // Skip QTYPE and QCLASS
         offset += 4;
     }
     
     return offset; // Length up to end of questions
 }
-
-// void send_blocked_response(int sockfd, struct sockaddr_in *client_addr, 
-//                          socklen_t client_addr_len, const unsigned char *request_buffer, 
-//                          size_t request_len, int rcode) {
 void send_blocked_response(int sockfd, struct sockaddr *client_addr, socklen_t client_addr_len,
-    const unsigned char *request_buffer, size_t request_len, int rcode){
-     
-    
-    // 1. Create response buffer
+    const unsigned char *request_buffer, size_t request_len, int rcode) {
+
+    // Calculate message length up to end of questions
     size_t message_length = calculate_dns_message_length(request_buffer, request_len);
-    unsigned char response[4096];
+ 
+    unsigned char response[1024];
     memcpy(response, request_buffer, message_length);
-    
-    // 2. Get pointer to DNS header
+
+    // DNS header
     HEADER *response_header = (HEADER *)response;
-    
-    // 3. Convert flags to host byte order for modification
+
+    // Convert flags to host byte order
     uint16_t flags = ntohs(response_header->flags);
-    
-    // 4. Modify flags using BIT MASKS (not direct field access!)
-    flags |= DNS_QR_MASK;     // Set QR=1 (Response)
+
+    flags |= DNS_QR_MASK;   // Set QR = 1 (Response)
     flags &= ~DNS_RCODE_MASK; // Clear RCODE bits
-    flags |= rcode;           // Set RCODE (5 = REFUSED)
-    flags &= ~DNS_RA_MASK;    // Set RA=0
-    flags &= ~DNS_AA_MASK;    // Set AA=0  
-    flags &= ~DNS_TC_MASK;    // Set TC=0
-    
-    // Handle RD flag
+    flags |= rcode;         // Set RCODE (e.g., REFUSED)
     if (flags & DNS_RD_MASK) {
-        flags &= ~DNS_RA_MASK; // If RD=1, set RA=0
+        flags |= DNS_RA_MASK; // If RD=1, set RA=1
     }
-    
-    // 5. Set counts to 0
-    response_header->ancount = 0;     // No answers
-    response_header->nscount = 0;     // No authority records  
-    response_header->arcount = 0;     // No additional records
-    
-    // 6. Convert flags back to network byte order
+    // Convert flags back to network byte order
     response_header->flags = htons(flags);
-    
-    // 7. Send the response
-    ssize_t sent_bytes = sendto(sockfd, response, message_length, 0,
-                               (struct sockaddr *)client_addr, client_addr_len);
+    // Send response
+    ssize_t sent_bytes = sendto(sockfd, response, message_length, 0,(struct sockaddr *)client_addr, client_addr_len);
     if (sent_bytes < 0) {
         perror("sendto");
-    } else {
-        if(verbose_mode)  printf("Sent blocked response (%zd bytes) to client\n", sent_bytes);
-        
+    } else if (verbose_mode) {
+        printf("Sent blocked response (%zd bytes) to client\n", sent_bytes);
     }
+
 }
-
-

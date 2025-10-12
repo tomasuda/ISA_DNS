@@ -42,7 +42,7 @@ void setup_signal_handlers() {
 
 int main(int argc, char *argv[]) {
     setup_signal_handlers();
- 
+    int err_retturns= 0;
 
 
     scener_args =(Arguments*) malloc(sizeof(Arguments));
@@ -75,13 +75,19 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     ht_init(table);
-
-       if (undesired_domains(scener_args->file_name, table) < 0) {
-
+        err_retturns=undesired_domains(scener_args->file_name, table);
+       if (err_retturns< 0) {
            fprintf(stderr, "Error: Failed to process file '%s'.\n", scener_args->file_name);
            free(scener_args);
            return EXIT_FAILURE;
        }
+       else if(err_retturns==1){
+            fprintf(stderr, "Error: FWrong format in file:'%s'.\n", scener_args->file_name);
+            free(scener_args);
+            return 2;// wrong file format
+
+       }
+
 
     // Start the server part
     int server_socket = server_part(scener_args->server_port, table, scener_args->server_ip_or_domain_name);
