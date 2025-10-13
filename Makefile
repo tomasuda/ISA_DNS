@@ -18,7 +18,7 @@ TARGET = dns
 TEST_TARGET = dns_test
 
 # Test script
-TEST_SCRIPT = ./tests/test.py
+TEST_SCRIPT = tests/test.py
 
 # Default target
 all: $(TARGET)
@@ -31,13 +31,16 @@ $(TARGET): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean rule
+# Clean rule (všetko)
 clean:
-	rm -f $(OBJS) $(TARGET) $(TEST_TARGET)
+	rm -f *.o *.gcda *.gcno *.gcov $(TARGET) $(TEST_TARGET)
+	rm -rf tests/__pycache__ .pytest_cache
+
 
 # Test build: always rebuild with test flags
 test: $(TEST_TARGET)
-	@pytest $(TEST_SCRIPT)
+	@cd tests && python3 test.py
+
 
 $(TEST_TARGET): $(SRCS)
 	$(CC) $(TFLAGS) -o $(TEST_TARGET) $(SRCS)

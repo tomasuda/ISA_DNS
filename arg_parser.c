@@ -61,7 +61,7 @@ int parser(int argc, char *argv[], Arguments *chat_server_args) {
                     exit(EXIT_FAILURE);
                 }
                 if (getaddrinfo(optarg, NULL, &hints, &res) != 0) {
-                    fprintf(stderr,"invalid IP ar domainname/n");
+                    fprintf(stderr,"invalid IP or domain name\n");
                     usage();
                     exit(EXIT_FAILURE);
                 }
