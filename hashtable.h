@@ -1,17 +1,18 @@
+// reused most of code from IAL project 2024/25
 // hashtable.h
 #ifndef IAL_HASHTABLE_H
 #define IAL_HASHTABLE_H
 
 #include <stdbool.h>
 
-// Prvok tabulky
+
 typedef struct ht_item {
   char *key;
   char *value;
   struct ht_item *next;
 } ht_item_t;
 
-// Tabuľka
+//table
 typedef ht_item_t **ht_table_t;
 
 int get_hash(char *key);

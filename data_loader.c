@@ -4,10 +4,10 @@
 #include <string.h>
 #include "hashtable.h"
 #include <unistd.h>
+#include <ctype.h>
 
 // Global variable to store the count of valid lines
 //Usage for deallocation of memory
-
 // for efectivity of hash table size is doubled
 // to reduce collisions
 int line_count = 0;
@@ -45,10 +45,7 @@ int count_lines(char *file_name) {
     return 0;
 }
 
-
-
-int undesired_domains(char * file_name, ht_table_t table) {
-
+int undesired_domains(char *file_name, ht_table_t table) {
     FILE *file = fopen(file_name, "r");
     if (!file) {
         perror("Error opening file");
@@ -60,40 +57,51 @@ int undesired_domains(char * file_name, ht_table_t table) {
     ssize_t read;
 
     while ((read = getline(&line, &len, file)) != -1) {
-        // Remove newline character if present
+        // Remove trailing newline
         if (read > 0 && line[read - 1] == '\n') {
             line[read - 1] = '\0';
         }
-        // Strip leading whitespaces
+
+        // Strip leading spaces/tabs
         char *start = line;
-        while (*start && (*start == ' ' || *start == '\t')) {
+        while (*start && isspace((unsigned char)*start)) {
             start++;
         }
 
-        // Strip trailing whitespaces
+        // Strip trailing spaces/tabs
         char *end = start + strlen(start) - 1;
-        while (end > start && (*end == ' ' || *end == '\t')) {
+        while (end > start && isspace((unsigned char)*end)) {
             *end = '\0';
             end--;
         }
-        if(line[0] == '#' || line[0] == '\0') {
-            continue; // Skip comments and empty lines
+
+        // Skip empty lines or comments
+        if (*start == '\0' || *start == '#') {
+            continue;
         }
 
-        #ifdef TEST
-            printf( "'%s'\n", line);
+        for (size_t i = 0; i < strlen(start); i++) {
+            //2 dots beside each other
+            if (start[i] == '.' && start[i + 1] == '.') {
+                free(line);
+                fclose(file);
+                return 1;
+            }
 
-        #endif
-     
-        ht_insert(table, line, line);
-        
-        // Process the line here (add to your filter structure)
+            if (start[i] == '-') {
+                if (i + 1 == strlen(start) || start[i + 1] == '.') {
+                    free(line);
+                    fclose(file);
+                    return 1;
+                }
+            }
+        }
+
+
+        ht_insert(table, start, start);
     }
 
-    // Free the allocated memory
     free(line);
     fclose(file);
-
-    // printf("Total valid lines: %d\n", line_count);
-    return 0;
+    return 0; 
 }
