@@ -13,7 +13,6 @@
 #include <errno.h>
 #include "main.h"
 #include <sys/time.h>
-#include <asm-generic/socket.h>
 #include <pthread.h>
 #include <signal.h>
 #include <ctype.h>
@@ -27,7 +26,7 @@ static volatile sig_atomic_t server_running = 1;
 #define MAX_THREADS 50
 sem_t *thread_sem ,*hash_lock;
 
-// Helper: print DNS header (assumes header fields are already in host byte order)
+// printer for DNS header verbose mode
 void print_dns_header(HEADER *header) {
     uint16_t flags = ntohs(header->flags);
 
@@ -43,8 +42,7 @@ void print_dns_header(HEADER *header) {
     printf("  RCODE: %d\n", flags & DNS_RCODE_MASK);
     printf("  Questions: %d\n", header->qdcount);
     printf("  Answers: %d\n", header->ancount);
-    printf("  Authorities: %d\n", header->nscount);
-    printf("  Additional: %d\n", header->arcount);
+
 }
 
 void bye_termination(Arguments *args, ht_table_t table) {
@@ -52,6 +50,17 @@ void bye_termination(Arguments *args, ht_table_t table) {
     if (table) {
         ht_delete_all(table);
         table = NULL;
+    }
+    // cleanup semaphores + unmap if allocated
+    if (thread_sem) {
+        sem_destroy(thread_sem);
+        munmap(thread_sem, sizeof(sem_t));
+        thread_sem = NULL;
+    }
+    if (hash_lock) {
+        sem_destroy(hash_lock);
+        munmap(hash_lock, sizeof(sem_t));
+        hash_lock = NULL;
     }
     exit(EXIT_SUCCESS);
 }
@@ -63,7 +72,7 @@ void signal_handler(int sig) {
     server_running = 0;
 }
 
-// send_receive: supports IPv4/IPv6 upstream resolver (server_ip can be literal IP or hostname)
+// sending and receiving DNS messages to/from resolver
 void send_receive(int sockfd, struct sockaddr_storage *client_addr, socklen_t client_addr_len, unsigned char *buffer,
                   size_t buffer_len, char *server_ip) {
     struct addrinfo hints, *res = NULL, *rp = NULL;
@@ -87,7 +96,9 @@ void send_receive(int sockfd, struct sockaddr_storage *client_addr, socklen_t cl
         if (sockfd_resolver < 0) continue;
 
         // set recv timeout
-        struct timeval timeout = { .tv_sec = 3, .tv_usec = 0 };
+        struct timeval timeout ;
+        timeout.tv_sec = 3; // 3 seconds timeout
+        timeout.tv_usec = 0; // 0 microseconds timeout
         if (setsockopt(sockfd_resolver, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
             perror("setsockopt SO_RCVTIMEO");
             close(sockfd_resolver);
@@ -95,7 +106,7 @@ void send_receive(int sockfd, struct sockaddr_storage *client_addr, socklen_t cl
             continue;
         }
 
-        // send
+        // sending to resolver
         ssize_t sent = sendto(sockfd_resolver, buffer, buffer_len, 0, rp->ai_addr, rp->ai_addrlen);
         if (sent < 0) {
             perror("Error sending to resolver");
@@ -132,31 +143,10 @@ void send_receive(int sockfd, struct sockaddr_storage *client_addr, socklen_t cl
     }
 
     // optional: log resolver address
-    char ipbuf[INET6_ADDRSTRLEN];
-    if (response_addr.ss_family == AF_INET) {
-        struct sockaddr_in *s = (struct sockaddr_in *)&response_addr;
-        inet_ntop(AF_INET, &s->sin_addr, ipbuf, sizeof(ipbuf));
-    } else if (response_addr.ss_family == AF_INET6) {
-        struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)&response_addr;
-        inet_ntop(AF_INET6, &s6->sin6_addr, ipbuf, sizeof(ipbuf));
-    } else {
-        strncpy(ipbuf, "unknown", sizeof(ipbuf));
-        ipbuf[sizeof(ipbuf)-1] = '\0';
-    }
-    if (verbose_mode) fprintf(stderr, "Resolver replied from %s\n", ipbuf);
-    char ip_str[INET6_ADDRSTRLEN];
-    
-if(client_addr->ss_family == AF_INET6) {
-    inet_ntop(AF_INET6, &((struct sockaddr_in6 *)client_addr)->sin6_addr, ip_str, sizeof(ip_str));
-} else {
-    inet_ntop(AF_INET, &((struct sockaddr_in *)client_addr)->sin_addr, ip_str, sizeof(ip_str));
-}
-printf("Sending response to %s\n", ip_str);
+    (void)response_addr; // keep compiler quiet if not used
 
-
-    // forward back to client (client_addr may be IPv4 or IPv6)
-    ssize_t sent_to_client = sendto(sockfd, response_buffer, received, 0,
-                                   (struct sockaddr *)client_addr, client_addr_len);
+    // forward back to client
+    ssize_t sent_to_client = sendto(sockfd, response_buffer, received, 0, (struct sockaddr *)client_addr, client_addr_len);
     if (sent_to_client < 0) perror("Error sending response to client");
 
     close(sockfd_resolver);
@@ -173,11 +163,6 @@ void free_dns_question(dns_question_t *question) {
 void *process_dns_message_thread(void *arg) {
     thread_data_t *data = (thread_data_t *)arg;
     if (!data) return NULL;
-
-    int sem_value;
-    sem_getvalue(thread_sem, &sem_value);
-    fprintf(stderr, "[THREAD %lu] start, sem: %d/%d, buffer: %zd bytes\n",
-            (unsigned long)pthread_self(), MAX_THREADS - sem_value, MAX_THREADS, data->msg_len);
 
     if (verbose_mode) printf("Received %zd bytes from client\n", data->msg_len);
 
@@ -205,11 +190,6 @@ void *process_dns_message_thread(void *arg) {
                 break;
             }
 
-            if (verbose_mode) {
-                printf("DNS Question %d:\n  QNAME: %s\n  QTYPE: %d\n  QCLASS: %d\n",
-                       i+1, question.qname, question.flags.qtype, question.flags.qclass);
-            }
-
             char *domain_copy = strdup(question.qname);
             if (!domain_copy) {
                 free_dns_question(&question);
@@ -221,12 +201,22 @@ void *process_dns_message_thread(void *arg) {
             char *prev_domain = NULL;
             is_blocked = false;
             while (sub_domain != NULL) {
-                if (ht_search(data->table, ".") != NULL || (sub_domain != NULL && ht_search(data->table, sub_domain) != NULL)) {
-                    is_blocked = true;
-                    break;
+                if (sem_wait(hash_lock) == 0) {
+                    void *res = ht_search(data->table, "."); // check root block
+                    void *res2 = NULL;
+                    if (sub_domain != NULL) res2 = ht_search(data->table, sub_domain);
+                    sem_post(hash_lock);
+
+                    if (res != NULL || res2 != NULL) {
+                        is_blocked = true;
+                        break;
+                    }
+                } else {
+                    if (verbose_mode) fprintf(stderr, "hash_lock sem_wait failed\n");
                 }
+
                 prev_domain = sub_domain;
-                sub_domain = domain_parser(sub_domain);
+                sub_domain = domain_parser(sub_domain); // domain_parser should return next suffix or NULL
                 if (sub_domain == NULL || strcmp(sub_domain, prev_domain) == 0) break;
             }
 
@@ -304,30 +294,45 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
     hash_lock = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (thread_sem == MAP_FAILED || hash_lock == MAP_FAILED) { perror("mmap"); close(sockfd); return -1; }
 
-    if (sem_init(thread_sem, 0, MAX_THREADS) != 0) { perror("sem_init thread_sem"); close(sockfd); return -1; }
-    if (sem_init(hash_lock, 0, 1) != 0) { perror("sem_init hash_lock"); close(sockfd); return -1; }
+    if (sem_init(thread_sem, 0, MAX_THREADS) != 0) { perror("sem_init thread_sem"); munmap(thread_sem, sizeof(sem_t)); close(sockfd); return -1; }
+    if (sem_init(hash_lock, 0, 1) != 0) { perror("sem_init hash_lock"); sem_destroy(thread_sem); munmap(thread_sem, sizeof(sem_t)); munmap(hash_lock, sizeof(sem_t)); close(sockfd); return -1; }
 
     while (server_running) {
         struct timeval tv = { .tv_sec = 3, .tv_usec = 0 };
         setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-        thread_data_t *data = malloc(sizeof(thread_data_t));
-        if (!data) { perror("malloc"); continue; }
-
-        sem_wait(thread_sem);
+        // receive first, THEN acquire thread semaphore and spawn thread
         receiving_msg = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0,
                                  (struct sockaddr *)&client_addr, &client_addr_len);
 
         if (receiving_msg < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) { free(data); continue; }
-            perror("recvfrom"); free(data); continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) { continue; } // timeout - normal, loop again
+            perror("recvfrom"); continue;
         }
 
-        // fill data; ensure thread_data_t has compatible fields
+        // now wait for a free "thread slot"
+        if (sem_wait(thread_sem) != 0) {
+            // if sem_wait fails, skip processing this message to avoid inconsistent state
+            perror("sem_wait thread_sem");
+            continue;
+        }
+
+        thread_data_t *data = malloc(sizeof(thread_data_t));
+        if (!data) {
+            perror("malloc");
+            sem_post(thread_sem); // release slot if malloc failed
+            continue;
+        }
+
+        // fill data; ensure we don't copy beyond data->buffer size
         data->sockfd = sockfd;
         memcpy(&data->client_addr, &client_addr, sizeof(client_addr));
         data->client_addr_len = client_addr_len;
         data->msg_len = receiving_msg;
+        if ((size_t)receiving_msg > sizeof(data->buffer)) {
+            // truncate if too long (defensive)
+            receiving_msg = sizeof(data->buffer);
+        }
         memcpy(data->buffer, buffer, receiving_msg);
         data->table = table;
         data->server_ip_or_domain_name = server_ip_or_domain_name;
@@ -335,10 +340,23 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
         if (pthread_create(&tid, NULL, process_dns_message_thread, data) == 0) {
             pthread_detach(tid);
         } else {
-            perror("pthread_create"); free(data); sem_post(thread_sem); }
+            perror("pthread_create");
+            free(data);
+            sem_post(thread_sem);
+        }
     }
 
-    sem_destroy(thread_sem);
+    // cleanup
+    if (thread_sem) {
+        sem_destroy(thread_sem);
+        munmap(thread_sem, sizeof(sem_t));
+        thread_sem = NULL;
+    }
+    if (hash_lock) {
+        sem_destroy(hash_lock);
+        munmap(hash_lock, sizeof(sem_t));
+        hash_lock = NULL;
+    }
     close(sockfd);
     return 0;
 }
