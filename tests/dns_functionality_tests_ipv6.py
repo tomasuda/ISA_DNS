@@ -8,7 +8,7 @@ path = str(Path(__file__).resolve().parent.parent / "dns_test")
 file_correct = "test_datafile.txt"
 file_block_all = "test_datafile_block_all.txt"
 file_allow_all = "test_datafile_allow_all.txt"
-
+port = "1053"
 
 def dig_output_match(output):
     import re
@@ -36,12 +36,12 @@ def dig_output_match(output):
 
 
 def test_correct_domain():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
         print(output)
@@ -59,12 +59,12 @@ def test_correct_domain():
             server_proc.kill()
 
 def test_blocked_domain():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "xq1.net"]
+        dig_cmd = ["dig", "@::1", "-p", port, "xq1.net"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -83,12 +83,12 @@ def test_blocked_domain():
             server_proc.kill()
 
 def test_non_existent_domain():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "dufam.ze.toto.uz.neexistuje.net"]
+        dig_cmd = ["dig", "@::1", "-p", port, "dufam.ze.toto.uz.neexistuje.net"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -107,12 +107,12 @@ def test_non_existent_domain():
             server_proc.kill()
 
 def test_blocked_subdomain():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "subdomain.a.a.a.a.a.a.a.a.a.xq1.net"]
+        dig_cmd = ["dig", "@::1", "-p", port, "subdomain.a.a.a.a.a.a.a.a.a.xq1.net"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -131,12 +131,12 @@ def test_blocked_subdomain():
             server_proc.kill()
 
 def test_non_valid_domain_dash():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube-.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube-.com"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -155,12 +155,12 @@ def test_non_valid_domain_dash():
             server_proc.kill()
 
 def test_non_valid_domain_unknown_chars():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube_*.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube_*.com"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -179,12 +179,12 @@ def test_non_valid_domain_unknown_chars():
             server_proc.kill()
 
 def test_main_domain():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "."]
+        dig_cmd = ["dig", "@::1", "-p", port, "."]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -203,12 +203,12 @@ def test_main_domain():
             server_proc.kill()
 
 def test_blocked_with_different_format():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "yAb-AdiMageS.s3.amazOnaws.Com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "yAb-AdiMageS.s3.amazOnaws.Com"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -228,12 +228,12 @@ def test_blocked_with_different_format():
 
 
 def test_handling_with_different_format():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "YoUtUBE.COm"]
+        dig_cmd = ["dig", "@::1", "-p", port, "YoUtUBE.COm"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -252,12 +252,12 @@ def test_handling_with_different_format():
             server_proc.kill()
 
 def test_correct_AAAA_query():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com", "AAAA"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com", "AAAA"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -276,12 +276,12 @@ def test_correct_AAAA_query():
             server_proc.kill()
 
 def test_block_all():
-    server_cmd = [path, "-f", file_block_all, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_block_all, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com"]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -300,12 +300,12 @@ def test_block_all():
             server_proc.kill()
 
 def test_allow_all():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com", ]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com", ]
         dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
         output = dig_output.stdout
 
@@ -324,12 +324,12 @@ def test_allow_all():
             server_proc.kill()
 
 def test_threads_blocked_all():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_block_all, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com"]
 
         total = 50
         failed = 0
@@ -360,12 +360,12 @@ def test_threads_blocked_all():
 
 
 def test_threads_allowed_multiple():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "youtube.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "youtube.com"]
 
         total = 50
         failed = 0
@@ -395,12 +395,12 @@ def test_threads_allowed_multiple():
 
 
 def test_threads_nonexisting_domain_multiple():
-    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", "5353"]
+    server_cmd = [path, "-f", file_correct, "-s", "2001:4860:4860::8888", "-p", port]
     server_proc = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     try:
         time.sleep(1)
-        dig_cmd = ["dig", "@::1", "-p", "5353", "nech.sa.test.vydary.com"]
+        dig_cmd = ["dig", "@::1", "-p", port, "nech.sa.test.vydary.com"]
 
         total = 50
         failed = 0

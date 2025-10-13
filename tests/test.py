@@ -6,9 +6,9 @@ from pathlib import Path
 def main():
     tests_dir = Path(__file__).resolve().parent
     test_files = [
-        # tests_dir / "input_tests.py",
+        tests_dir / "input_tests.py",
         tests_dir / "dns_functionality_tests_ipv4.py",
-        tests_dir / "dns_functionality_tests_ipv6.py",
+        # tests_dir / "dns_functionality_tests_ipv6.py", #if suports ipv6
     ]
 
     for test_file in test_files:
