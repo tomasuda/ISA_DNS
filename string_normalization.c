@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
 
 /*
  * Normalize a string by trimming whitespace and converting to lowercase.
@@ -30,42 +31,26 @@ char *normalize_string(const char *input) {
 }
 
 //afinds all sub dommains and returns upper domains up to main domain
-char * domain_parser(char* input)
+// returns a newly-allocated string containing the suffix after the first dot
+// or NULL if there's no suffix. Caller must free() the returned pointer.
+char *domain_parser(const char *input)
 {
-	if (input==NULL) return NULL;
-	char *first_dot = strchr(input, '.');// first dot subsud.sub.example.com -> sub.example.com
-	if (first_dot == NULL) return NULL;
-	return first_dot + 1;
+    if (!input) return NULL;
+    const char *first_dot = strchr(input, '.');
+    if (!first_dot) return NULL;
+    const char *suffix = first_dot + 1;
+    if (*suffix == '\0') return NULL;
 
+    char *copy = strdup(suffix);
+    if (!copy) {
+        fprintf(stderr, "strdup in domain_parser");
+        return NULL;
+    }
+    return copy;
 }
 
-void to_lower_str(char *s) {
-    for (; *s; ++s)
-        *s = tolower((unsigned char)*s);
+
+void to_lower_str(char *string) {
+    for (; *string; ++string)
+        *string = tolower((unsigned char)*string);
 }
-
-// char *main_domain_finder( char *input) {
-// 	if (input == NULL) return NULL;
-
-// 	// Find the last two segments of the domain
-// 	const char *last_dot = strrchr(input, '.');// last dot (.com)
-// 	if (last_dot == NULL || last_dot == input) return NULL;
-
-// 	const char *second_last_dot = NULL;
-// 	for (const char *p = last_dot - 1; p >= input; p--) {
-// 		if (*p == '.') {
-// 			second_last_dot = p;
-// 			break;
-// 		}
-// 	}
-
-// 	if (second_last_dot == NULL) return input;
-
-// 	// Allocate memory for the main domain
-// 	size_t length = strlen(second_last_dot + 1);
-// 	char *main_domain = (char *)malloc(length + 1);
-// 	if (main_domain == NULL) return NULL;
-
-// 	strcpy(main_domain, second_last_dot + 1);
-// 	return main_domain;
-// }

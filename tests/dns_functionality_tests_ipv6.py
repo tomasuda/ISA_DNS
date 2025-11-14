@@ -346,9 +346,9 @@ def test_threads_blocked_all():
                 or len(parsed["warnings"]) != 0
             ):
                 failed += 1
-                print(f"❌ Failed query {i+1}: {parsed}")
+                print(f"Failed query {i+1}: {parsed}")
 
-        print(f"\n✅ Passed: {total - failed}, ❌ Failed: {failed} / {total}")
+        print(f"\nPassed: {total - failed}, Failed: {failed} / {total}")
         assert failed == 0, f"{failed} queries failed out of {total}"
 
     finally:
@@ -381,9 +381,9 @@ def test_threads_allowed_multiple():
                 or len(parsed["warnings"]) != 0
             ):
                 failed += 1
-                print(f"❌ Failed query {i+1}: {parsed}")
+                print(f"Failed query {i+1}: {parsed}")
 
-        print(f"\n✅ Passed: {total - failed}, ❌ Failed: {failed} / {total}")
+        print(f"\n Passed: {total - failed}, Failed: {failed} / {total}")
         assert failed == 0, f"{failed} queries failed out of {total}"
 
     finally:
@@ -416,9 +416,9 @@ def test_threads_nonexisting_domain_multiple():
                 or len(parsed["warnings"]) != 0
             ):
                 failed += 1
-                print(f"❌ Failed query {i+1}: {parsed}")
+                print(f" Failed query {i+1}: {parsed}")
 
-        print(f"\n✅ Passed: {total - failed}, ❌ Failed: {failed} / {total}")
+        print(f"\nPassed: {total - failed}, Failed: {failed} / {total}")
         assert failed == 0, f"{failed} queries failed out of {total}"
 
     finally:

@@ -174,19 +174,24 @@ void *process_dns_message_thread(void *arg) {
 
         
         char *domain_copy = strdup(question.qname);
-        to_lower_str(domain_copy);//formating domain
-
-        bool blocked =false;
+        to_lower_str(domain_copy);
+        char *current_domain;
+        bool blocked = false;
         if(ht_search(data->table,".")==NULL){
-            do{
-            if (ht_search(data->table, domain_copy) != NULL) blocked=true;
-            domain_copy = domain_parser(domain_copy);//removes last subdomain sub.domain.com->domain.com
-            }while(domain_copy != NULL);
+            current_domain = domain_copy;
+            do {
+                if (ht_search(data->table, current_domain) != NULL) blocked = true;
+                char *next_domain = domain_parser(current_domain); // now returns strdup'ed string
+                if (current_domain != domain_copy) {
+                    free(current_domain); 
+                }
+                current_domain = next_domain;
+                
+            } while(current_domain != NULL);
+        } else {
+            blocked = true;
         }
-        else {
-            blocked=true;
-        }
-
+        printf("Domain requested: %s\n", question.qname);
         free(domain_copy);
 
         if(blocked){

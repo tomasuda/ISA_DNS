@@ -25,7 +25,7 @@ def run_command_with_timeout(command, timeout=3):
         output, error = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         try:
-            process.terminate()  # pošle SIGTERM
+            process.terminate()  # SIGTERM
         except OSError:
             pass
         time.sleep(0.5)
