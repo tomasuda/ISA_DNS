@@ -1,3 +1,8 @@
+/**
+ * @file dns_forwarder.h
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #ifndef ISA_DNS_FORWARDER_H
 #define ISA_DNS_FORWARDER_H
 
@@ -7,17 +12,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-/* Struct for the DNS Header - NETWORK BYTE ORDER */
 typedef struct header {
-    uint16_t id;           // network byte order
-    uint16_t flags;        // network byte order - use bit masking!
-    uint16_t qdcount;      // network byte order
-    uint16_t ancount;      // network byte order  
-    uint16_t nscount;      // network byte order
-    uint16_t arcount;      // network byte order
+    uint16_t id;          
+    uint16_t flags;       
+    uint16_t qdcount;      
+    uint16_t ancount;      
+    uint16_t nscount;    
+    uint16_t arcount;    
 } HEADER;
 
-/* Flags accessed through bit masks */
+//  Flags accessed through bit masks 
 #define DNS_QR_MASK    0x8000
 #define DNS_OPCODE_MASK 0x7800  
 #define DNS_AA_MASK    0x0400
@@ -27,13 +31,13 @@ typedef struct header {
 #define DNS_Z_MASK     0x0070
 #define DNS_RCODE_MASK 0x000F
 
-/* Struct for the flags for the DNS Question */
+//  Struct for the flags for the DNS Question 
 typedef struct q_flags {
     uint16_t qtype;
     uint16_t qclass;
 } Q_FLAGS;
 
-/* Struct for the flags for the DNS RRs */
+//  Struct for the flags for the DNS RRs 
 typedef struct rr_flags {
     uint16_t type;
     uint16_t class;
@@ -46,22 +50,6 @@ typedef struct {
     char *qname;        // domain name
     Q_FLAGS flags;      // question flags
 } dns_question_t;
-
-// DNS resource record structure
-typedef struct {
-    char *name;         // domain name
-    RR_FLAGS flags;     // resource record flags
-    unsigned char *rdata; // resource data
-} dns_rr_t;
-
-// // DNS message structure
-// typedef struct {
-//     HEADER header;
-//     dns_question_t *questions;
-//     dns_rr_t *answers;
-//     dns_rr_t *authorities;
-//     dns_rr_t *additionals;
-// } dns_message_t;
 
 
 typedef struct {

@@ -1,5 +1,9 @@
+/**
+ * @file hashtable.h
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 // reused most of code from IAL project 2024/25
-// hashtable.h
 #ifndef IAL_HASHTABLE_H
 #define IAL_HASHTABLE_H
 

@@ -1,3 +1,8 @@
+/**
+ * @file data_loader.c
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #include "data_loader.h"
 #include <stdio.h>
 #include <stdlib.h>

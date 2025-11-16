@@ -1,3 +1,8 @@
+/**
+ * @file dns_forwarder.c
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,6 +177,21 @@ void *process_dns_message_thread(void *arg) {
             return NULL;
         }
 
+
+        // Check if QTYPE is supported, otherwise REFUSED
+        if (question.flags.qtype != 1 && question.flags.qtype != 28) {
+            if (verbose_mode)printf("Unsupported QTYPE %d → returning REFUSED\n", question.flags.qtype);
+
+            send_blocked_response(data->sockfd,(struct sockaddr*)&data->client_addr,
+                data->client_addr_len,data->buffer,data->msg_len,5);
+
+            free_dns_question(&question);
+            sem_post(thread_sem);
+            free(data);
+            return NULL;
+        }
+
+
         
         char *domain_copy = strdup(question.qname);
         to_lower_str(domain_copy);
@@ -181,7 +201,7 @@ void *process_dns_message_thread(void *arg) {
             current_domain = domain_copy;
             do {
                 if (ht_search(data->table, current_domain) != NULL) blocked = true;
-                char *next_domain = domain_parser(current_domain); // now returns strdup'ed string
+                char *next_domain = domain_parser(current_domain); //returns strdup'ed string
                 if (current_domain != domain_copy) {
                     free(current_domain); 
                 }
@@ -191,7 +211,6 @@ void *process_dns_message_thread(void *arg) {
         } else {
             blocked = true;
         }
-        printf("Domain requested: %s\n", question.qname);
         free(domain_copy);
 
         if(blocked){
@@ -234,9 +253,6 @@ int server_part(int port, ht_table_t table, char *server_ip_or_domain_name) {
     int opt = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    // #ifdef SO_REUSEPORT
-    //     setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-    // #endif
 
     memset(&server_addr6, 0, sizeof(server_addr6));
     server_addr6.sin6_family = AF_INET6;

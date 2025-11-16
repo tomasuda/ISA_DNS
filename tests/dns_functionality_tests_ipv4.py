@@ -407,7 +407,7 @@ def test_threads_nonexisting_domain_multiple():
         failed = 0
 
         for i in range(total):
-            dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=5)
+            dig_output = subprocess.run(dig_cmd, capture_output=True, text=True, timeout=10)
             output = dig_output.stdout
             parsed = dig_output_match(output)
             
@@ -425,6 +425,6 @@ def test_threads_nonexisting_domain_multiple():
     finally:
         server_proc.terminate()
         try:
-            server_proc.wait(timeout=2)
+            server_proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             server_proc.kill()

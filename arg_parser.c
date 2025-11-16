@@ -30,7 +30,7 @@ void usage() {
 
 }
 
-int parser(int argc, char *argv[], Arguments *chat_server_args) {
+int parser(int argc, char *argv[], Arguments *scener_args) {
     char *target_address = NULL, *src_file_name = NULL;
     int help_flag = 0, opt;
     int port = 53;
@@ -156,9 +156,9 @@ int parser(int argc, char *argv[], Arguments *chat_server_args) {
         return -1;
     }
    
-    strcpy(chat_server_args->server_ip_or_domain_name, target_address);
-    strcpy(chat_server_args->file_name, src_file_name);
-    chat_server_args->server_port = port;
+    strcpy(scener_args->server_ip_or_domain_name, target_address);
+    strcpy(scener_args->file_name, src_file_name);
+    scener_args->server_port = port;
     freeaddrinfo(res);
     return 1;
 }

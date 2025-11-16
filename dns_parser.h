@@ -1,3 +1,8 @@
+/**
+ * @file dns_parser.h
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #ifndef DNS_PARSER_H
 #define DNS_PARSER_H
 

@@ -1,4 +1,9 @@
 
+/**
+ * @file dns_parser.c
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #include "dns_forwarder.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -148,6 +153,7 @@ size_t calculate_dns_message_length(const unsigned char *dns_msg, size_t max_len
     
     return offset; // Length up to end of questions
 }
+
 void send_blocked_response(int sockfd, struct sockaddr *client_addr, socklen_t client_addr_len,
     const unsigned char *request_buffer, size_t request_len, int rcode) {
 
@@ -165,7 +171,7 @@ void send_blocked_response(int sockfd, struct sockaddr *client_addr, socklen_t c
 
     flags |= DNS_QR_MASK;   // Set QR = 1 (Response)
     flags &= ~DNS_RCODE_MASK; // Clear RCODE bits
-    flags |= rcode;         // Set RCODE (e.g., REFUSED)
+    flags |= rcode;        
     if (flags & DNS_RD_MASK) {
         flags |= DNS_RA_MASK; // If RD=1, set RA=1
     }

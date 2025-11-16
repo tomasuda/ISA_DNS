@@ -424,6 +424,6 @@ def test_threads_nonexisting_domain_multiple():
     finally:
         server_proc.terminate()
         try:
-            server_proc.wait(timeout=2)
+            server_proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             server_proc.kill()

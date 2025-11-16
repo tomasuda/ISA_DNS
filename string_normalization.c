@@ -1,11 +1,16 @@
+/**
+ * @file string_normalization.c
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 
-/*
- * Normalize a string by trimming whitespace and converting to lowercase.
- */
+
+//   Normalize a string by trimming whitespace and converting to lowercase.
+
 char *normalize_string(const char *input) {
     if (input == NULL) return NULL;
 

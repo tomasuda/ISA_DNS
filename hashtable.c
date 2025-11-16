@@ -1,3 +1,8 @@
+/**
+ * @file hashtable.c
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 // reused most of code from IAL project 2024/25
 #include "hashtable.h"
 #include "data_loader.h"

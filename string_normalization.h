@@ -1,3 +1,8 @@
+/**
+ * @file string_normalization.h
+ * @author Tomas Suda (xsudato00)
+ * @date 20/9/2025
+ */
 #ifndef STRING_NORMALIZATION_H
 #define STRING_NORMALIZATION_H
 

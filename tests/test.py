@@ -13,16 +13,16 @@ def main():
 
     for test_file in test_files:
         if not test_file.exists():
-            print(f"⚠️  File {test_file.name} does not exist — skipping.")
+            print(f"  File {test_file.name} does not exist — skipping.")
             continue
 
-        print(f"▶  Running {test_file.name}...\n")
+        print(f" Running {test_file.name}...\n")
         result = subprocess.run(["pytest", str(test_file)], text=True)
         if result.returncode != 0:
-            print(f"❌ Tests in {test_file.name} failed.")
+            print(f" Tests in {test_file.name} failed.")
             sys.exit(result.returncode)
 
-    print("\n✅ All tests passed successfully.")
+    print("\n All tests passed successfully.")
     sys.exit(0)
 
 if __name__ == "__main__":
