@@ -1,14 +1,13 @@
-Usage  
-    specify port and file in which is list of url you want to filter
+## Rozšírenie
 
+- Podpora dotazov typu A (IPv4)
+- Podpora dotazov typu AAAA (IPv6)
+- Spracovanie dotazov na root doménu (.)
+- Validácia doménových mien (odmietnutie neplatných názvov)
 
+## Testovanie
 
-arg_parse module functionality  
-    loads stdin and filters all incorrect arguments
+Pri testoch je nutné mať podporu pre IPv6
+Musia byť nainštalované: python3, pytest, dnsutils
 
-data_loader module functionality 
-    filters all lines starting with '#"   
-    loads data from file
-    stores data in hash table which size is tailored to current file.
-
-server
+Testy sú spustiteľné príkazom `make test`
